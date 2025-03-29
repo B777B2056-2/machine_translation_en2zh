@@ -1,0 +1,2 @@
+# machine_translation_en2zh
+使用Pytorch手写实现原始Transformer训推流程，实现英文-中文机器翻译模型。
