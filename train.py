@@ -17,10 +17,10 @@ class Trainer(object):
     :param word_dim:          词嵌入维度
     :return:                  None
     """
-    self.net = Transformer(n_head=n_head, word_dim=word_dim, vocab_size=vocab_size).to(device)
+    self.device = "cuda" if torch.cuda.is_available() else "cpu"
+    self.net = Transformer(n_head=n_head, word_dim=word_dim, vocab_size=vocab_size).to(self.device)
     self.criterion = torch.nn.CrossEntropyLoss(ignore_index=0)
     self.optimizer = torch.optim.Adam(self.net.parameters(), lr=lr)
-    self.device = "cuda" if torch.cuda.is_available() else "cpu"
     # 初始化ckpt管理器
     self.ckpt = CheckpointManager(save_interval=ckpt_save_interval)
     # 保存超参数字典
@@ -90,7 +90,7 @@ class Trainer(object):
         self.optimizer.zero_grad()
         probs = self.net(encoder_inputs, decoder_inputs)
         loss = self.criterion(
-          probs.contiguous().view(-1, vocab_size),  # [batch*(seq_len-1), vocab_size]
+          probs.contiguous().view(-1, self.hyper_param["vocab_size"]),  # [batch*(seq_len-1), vocab_size]
           decoder_outputs.contiguous().view(-1)  # [batch*(seq_len-1)]
         )
         loss.backward()
@@ -102,19 +102,47 @@ class Trainer(object):
       self.__save_checkpoint(epoch=epoch)
 
 
+def train_main():
+  import argparse
+  parser = argparse.ArgumentParser(description='Transformer模型训练参数')
 
-if __name__ == "__main__":
-  # 参数定义
-  n_head = 8  # 多头注意力的头数量
-  word_dim = 64  # 词嵌入维度（词嵌入产出的词向量（即token）长度）
-  n_epoch = 10
-  device = "cuda" if torch.cuda.is_available() else "cpu"
+  train_group = parser.add_argument_group('训练参数')
+  train_group.add_argument('--n_epoch', type=int, default=10,
+                           help='训练轮次 (默认：10)')
+  train_group.add_argument('--lr', type=float, default=0.1,
+                           help='初始学习率 (默认：0.1)')
+  train_group.add_argument('--ckpt', type=int, default=1,
+                           help='ckpt保存间隔 (默认：1)')
+
+  model_group = parser.add_argument_group('模型参数')
+  model_group.add_argument('--n_head', type=int, default=8,
+                           help='注意力头数 (默认：8)')
+  model_group.add_argument('--word_dim', type=int, default=64,
+                           help='词向量维度 (默认：64)')
+
+  data_group = parser.add_argument_group('数据参数')
+  data_group.add_argument('--batch_size', type=int, default=32,
+                          help='批次大小 (默认：32)')
+  args = parser.parse_args()
+
   # 构建训练集
   print("start load training data...")
-  train_dataloader, vocab_size = build_train_data_loader()
+  train_dataloader, vocab_size = build_train_data_loader(batch_size=args.batch_size)
+
   # 构建训练器
-  trainer = Trainer(vocab_size, lr=0.1, n_head=n_head, word_dim=word_dim)
+  trainer = Trainer(
+    vocab_size=vocab_size,
+    lr=args.lr,
+    n_head=args.n_head,
+    word_dim=args.word_dim,
+    ckpt_save_interval=args.ckpt,
+  )
+
   # 开始训练
   print("start training...")
-  trainer.train(train_dataloader, n_epoch)
+  trainer.train(train_dataloader, args.n_epoch)
   print("finish training...")
+
+
+if __name__ == "__main__":
+  train_main()

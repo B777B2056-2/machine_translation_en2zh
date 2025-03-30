@@ -71,15 +71,43 @@ class Inference:
     answer = "".join(words)
     return answer
 
+def inference_main():
+  import argparse
+  # 创建参数解析器
+  parser = argparse.ArgumentParser(description='模型推理参数设置')
 
-if __name__ == "__main__":
+  # 模型参数组
+  model_group = parser.add_argument_group('模型参数')
+  model_group.add_argument('--model_path', type=str, required=True,
+                           help='模型检查点路径 (必需)')
+  model_group.add_argument('--tokenizer_dir', type=str, required=True,
+                           help='分词器目录路径 (必需)')
+
+  # 推理参数组
+  infer_group = parser.add_argument_group('推理参数')
+  infer_group.add_argument('--max_length', type=int, default=50,
+                           help='生成文本最大长度 (默认：50)')
+
+  args = parser.parse_args()
+
+  # 初始化推理引擎
   inference = Inference(
-    model_path="output/checkpoints/epoch_9_checkpoint.pt",
-    tokenizer_dir_path="output/vocabs",
+    model_path=args.model_path,
+    tokenizer_dir_path=args.tokenizer_dir,
   )
 
+  # 交互式推理循环
+  print("输入提示词开始生成（输入exit退出）:")
   while True:
-    prompt = input("> ")
-    if prompt == "exit":
+    try:
+      prompt = input("> ")
+      if prompt.lower() == "exit":
+        break
+      print(inference(prompt=prompt))
+    except KeyboardInterrupt:
+      print("\n退出推理")
       break
-    print(inference(prompt=prompt))
+
+
+if __name__ == "__main__":
+  inference_main()
