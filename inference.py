@@ -19,11 +19,12 @@ class Inference:
   def __load_model(self, model_path:str):
     """载入模型"""
     checkpoint = CheckpointManager.load_from_specified_path(model_path, device=self.device)
-    self.hyper_param = checkpoint.hyperparameters
-    vocab_size = self.hyper_param["vocab_size"]
-    n_head = self.hyper_param["n_head"]
-    word_dim = self.hyper_param["word_dim"]
-    self.net = Transformer(n_head=n_head, word_dim=word_dim, vocab_size=vocab_size)
+    hyper_param = checkpoint.hyperparameters
+    self.net = Transformer(
+      n_head=hyper_param["n_head"],
+      word_dim=hyper_param["word_dim"],
+      vocab_size=hyper_param["vocab_size"]
+    )
     self.net.load_state_dict(checkpoint.model_state)
 
     # 转移到可用设备
@@ -71,7 +72,7 @@ class Inference:
 
 if __name__ == "__main__":
   inference = Inference(
-    model_path="output/checkpoints/epoch_10_checkpoint.pt",
+    model_path="output/checkpoints/epoch_9_checkpoint.pt",
     tokenizer_dir_path="output/vocabs",
   )
 

@@ -22,30 +22,28 @@ class Trainer(object):
     self.optimizer = torch.optim.Adam(self.net.parameters(), lr=lr)
     self.device = "cuda" if torch.cuda.is_available() else "cpu"
     # 初始化ckpt管理器
-    self.ckpt = CheckpointManager()
+    self.ckpt = CheckpointManager(save_interval=ckpt_save_interval)
     # 保存超参数字典
     self.hyper_param = {
       "vocab_size": vocab_size,
-      "lr": lr,
       "n_head": n_head,
       "word_dim": word_dim,
-      "ckpt_save_interval": ckpt_save_interval,
     }
 
   def __need_save_checkpoint(self) -> bool:
     """检查用户是否需要保存ckpt"""
-    return self.hyper_param["ckpt_save_interval"] > 0
+    return self.ckpt.save_interval > 0
 
   def __save_checkpoint(self, epoch:int):
     """到达指定间隔，保存checkpoint"""
-    if not self.__need_save_checkpoint() or ((epoch + 1) % self.hyper_param["ckpt_save_interval"] != 0):
+    if not self.__need_save_checkpoint() or ((epoch + 1) % self.ckpt.save_interval != 0):
       return
     self.ckpt.save(
       CheckpointMetaInfo(
         epoch=epoch,
         model_state=self.net.state_dict(),
         optimizer_state=self.optimizer.state_dict(),
-        hyperparameters={},
+        hyperparameters=self.hyper_param,
       )
     )
     print(f"save checkpoint for epoch {epoch}")
@@ -59,10 +57,11 @@ class Trainer(object):
 
     # 恢复网络状态
     self.hyper_param = checkpoint.hyperparameters
-    vocab_size = self.hyper_param["vocab_size"]
-    n_head = self.hyper_param["n_head"]
-    word_dim = self.hyper_param["word_dim"]
-    self.net = Transformer(n_head=n_head, word_dim=word_dim, vocab_size=vocab_size)
+    self.net = Transformer(
+      n_head=self.hyper_param["n_head"],
+      word_dim=self.hyper_param["word_dim"],
+      vocab_size=self.hyper_param["vocab_size"]
+    )
     self.net.load_state_dict(checkpoint.model_state)
     self.optimizer.load_state_dict(checkpoint.optimizer_state)
 

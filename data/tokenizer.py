@@ -111,7 +111,7 @@ class Tokenizer:
         files.sort(key=lambda x: x.split("_")[-1].split(".")[0], reverse=True)
         tgt_file_path = os.path.join(dir_path, files[0])
         vectorizer = CountVectorizer(vocabulary=pickle.load(open(tgt_file_path,'rb')))
-        sentences_num = int(files[0].split(sep="_")[1])
+        sentences_num = int(files[0].split(sep="_")[-1].split(".")[0])
         instance = cls()
         instance.vectorizer = vectorizer
         instance.sentences_num = sentences_num
