@@ -66,6 +66,16 @@ class Tokenizer:
         # token编码：转成input ids向量
         return self.__word_to_idx(corpus)
 
+    def resume_state_from_dick(self, vectorizer, sentences_num:int):
+        self.vectorizer = vectorizer
+        self.sentences_num = sentences_num
+        self.__word2idx = self.vectorizer.vocabulary
+        for (word, idx) in self.__word2idx.items():
+            self.__idx2word[idx] = word
+        # 获取起始符、结束符索引
+        self.__start_symbol_idx = self.__word2idx[Tokenizer.SENTENCE_START_PLACEHOLDER.lstrip("<").rstrip(">")]
+        self.__end_symbol_idx = self.__word2idx[Tokenizer.SENTENCE_END_PLACEHOLDER.lstrip("<").rstrip(">")]
+
     def tokenize(self, language: str, prompts=None) -> List[List[int]]:
         # 判断是否已有词表，若无则构建后返回
         if self.sentences_num == 0:
@@ -84,7 +94,7 @@ class Tokenizer:
         """从传入token反向构建词"""
         words = []
         for word_idx in tokens:
-            words.append(self.__idx2word[word_idx])
+            words.append(self.__idx2word[word_idx] if word_idx in self.__idx2word else Tokenizer.SENTENCE_END_PLACEHOLDER)
         return words
 
     def start_flag_id(self) -> int:
@@ -113,6 +123,5 @@ class Tokenizer:
         vectorizer = CountVectorizer(vocabulary=pickle.load(open(tgt_file_path,'rb')))
         sentences_num = int(files[0].split(sep="_")[-1].split(".")[0])
         instance = cls()
-        instance.vectorizer = vectorizer
-        instance.sentences_num = sentences_num
+        instance.resume_state_from_dick(vectorizer=vectorizer, sentences_num=sentences_num)
         return instance

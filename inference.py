@@ -64,8 +64,10 @@ class Inference:
       decoder_outputs.append(next_token)
     # 将词索引转换为文本
     words = self.zh_tokenizer.detokenize(tokens=decoder_outputs)
-    words.remove(Tokenizer.SENTENCE_START_PLACEHOLDER)
-    words.remove(Tokenizer.SENTENCE_END_PLACEHOLDER)
+    if Tokenizer.SENTENCE_START_PLACEHOLDER in words:
+      words.remove(Tokenizer.SENTENCE_START_PLACEHOLDER)
+    if Tokenizer.SENTENCE_END_PLACEHOLDER in words:
+      words.remove(Tokenizer.SENTENCE_END_PLACEHOLDER)
     answer = "".join(words)
     return answer
 
@@ -80,4 +82,4 @@ if __name__ == "__main__":
     prompt = input("> ")
     if prompt == "exit":
       break
-    print(inference(prompt="Paris"))
+    print(inference(prompt=prompt))
