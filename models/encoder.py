@@ -29,4 +29,3 @@ class TransformerEncoder(torch.nn.Module):
     # 4. Add & Norm
     output = self.ffn_layer_norm(multi_head_attn_output+ffn_output)  # [batch_size, T, word_dim]
     return output
-

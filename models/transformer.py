@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: UTF-8 -*-
 import torch
-from models.pos_embedding import LearnedPositionalEmbeddingWithWordEmbedding
+from models.embedding import LearnedPositionalEmbeddingWithWordEmbedding
 from models.encoder import TransformerEncoder
 from models.decoder import TransformerDecoder
 
