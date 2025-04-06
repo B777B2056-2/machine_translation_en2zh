@@ -19,7 +19,7 @@ class Tokenizer(ABC):
   SENTENCE_END_PLACEHOLDER = "<eos>"   # 句子结束符
   WORD_PADDING_IDX = 0                 # 词填充索引
 
-  def __init__(self, language:str, file_path:str, mode:TokenizerMode=TokenizerMode.FROM_TEXT_DATA):
+  def __init__(self, language:str, file_path:str, mode:TokenizerMode):
     self.__language = language
     if mode == TokenizerMode.FROM_TEXT_DATA:
       self.__init_from_text(file_path)

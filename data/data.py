@@ -23,8 +23,7 @@ class EnZhDataSet(Dataset):
     self.encoder_inputs = [torch.LongTensor(t) for t in en_tokens]     # 编码器输入：待翻译语言（英语）的词索引序列
     self.decoder_inputs, self.decoder_outputs = self.__decoder_vectors_shift_right(zh_tokens)  # 解码器输入与标签
 
-  @staticmethod
-  def __decoder_vectors_shift_right(tokens):
+  def __decoder_vectors_shift_right(self, tokens):
     """解码器输入与标签构造"""
     decoder_inputs = []
     decoder_outputs = []
@@ -42,7 +41,7 @@ class EnZhDataSet(Dataset):
 
 class DataLoaderBuilder(object):
   """数据加载器构建工厂"""
-  def __init__(self, batch_size:int, num_workers:int, val_size:float):
+  def __init__(self, batch_size:int, num_workers:int, val_size:float, pin_memory:bool):
     """初始化：加载数据集"""
     import os
     import kagglehub
@@ -63,6 +62,7 @@ class DataLoaderBuilder(object):
     # 划分训练集与验证集
     self.batch_size = batch_size
     self.num_workers = num_workers
+    self.pin_memory = pin_memory
     self.train_set, self.val_set = torch.utils.data.random_split(
       dataset,
       [1.0 - val_size, val_size],
@@ -96,11 +96,11 @@ class DataLoaderBuilder(object):
 
   def train_data_loader(self):
     """构建训练集data loader"""
-    return DataLoader(self.train_set, batch_size=self.batch_size,
-                      collate_fn=DataLoaderBuilder.seq_collate_fn, shuffle=True, num_workers=self.num_workers)
+    return DataLoader(self.train_set, batch_size=self.batch_size, collate_fn=DataLoaderBuilder.seq_collate_fn,
+                      shuffle=True, num_workers=self.num_workers, pin_memory=self.pin_memory)
 
   def val_data_loader(self):
     """构建验证集data loader"""
-    val_data_loader = DataLoader(self.val_set, batch_size=self.batch_size,
-                                  collate_fn=DataLoaderBuilder.seq_collate_fn, shuffle=False, num_workers=self.num_workers)
+    val_data_loader = DataLoader(self.val_set, batch_size=self.batch_size, collate_fn=DataLoaderBuilder.seq_collate_fn,
+                                 shuffle=False, num_workers=self.num_workers, pin_memory=self.pin_memory)
     return val_data_loader

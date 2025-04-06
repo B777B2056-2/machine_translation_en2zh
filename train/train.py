@@ -51,16 +51,18 @@ def calculate_model_metrics(probs: torch.Tensor, targets: torch.Tensor,
 class Trainer(object):
   """机器翻译Transformer训练器"""
   def __init__(self, data_loader_builder:DataLoaderBuilder, random_seed:int, precision:str,
-               lr:float, n_head:int, word_dim:int, enable_data_parallel:bool, ckpt_save_interval:int=1):
+               lr:float, n_head:int, word_dim:int, enable_data_parallel:bool, ckpt_save_interval:int):
     """
     Args:
-    :param data_loader_builder: 数据加载器构建器
-    :param random_seed:         随机种子
-    :param precision:           精度，可选"fp32"或"bf16"
-    :param lr:                  学习率
-    :param n_head:              多头注意力机制的头个数
-    :param word_dim:            词嵌入维度
-    :return:                    None
+    :param data_loader_builder:   数据加载器构建器
+    :param random_seed:           随机种子
+    :param precision:             精度，可选"fp32"或"bf16"
+    :param lr:                    学习率
+    :param n_head:                多头注意力机制的头个数
+    :param word_dim:              词嵌入维度
+    :param enable_data_parallel:  是否开启数据并行
+    :param ckpt_save_interval     每隔ckpt_save_interval个epoch保存一次checkpoint
+    :return:                      None
     """
     self.device = "cuda" if torch.cuda.is_available() else "cpu"
     # 设置随机种子
@@ -219,6 +221,8 @@ def train_main():
                            help='训练轮次 (默认：10)')
   train_group.add_argument('--lr', type=float, default=0.0001,
                            help='初始学习率 (默认：0.0001)')
+  train_group.add_argument('--enable_pin_memory', type=bool, default=True,
+                           help='开启cpu gpu内存共享 (默认：开启)')
   train_group.add_argument('--enable_data_parallel', type=bool, default=True,
                            help='开启数据并行 (默认：开启)')
   train_group.add_argument('--ckpt', type=int, default=1,
@@ -243,7 +247,8 @@ def train_main():
   print("start load training data...")
   data_loader_builder = DataLoaderBuilder(batch_size=args.batch_size,
                                           num_workers=args.num_workers,
-                                          val_size=args.val_size)
+                                          val_size=args.val_size,
+                                          pin_memory=args.enable_pin_memory)
   print("finish load training data...")
 
   # 构建训练器
