@@ -8,24 +8,26 @@ from models.decoder import TransformerDecoder
 
 class Transformer(torch.nn.Module):
   """Transformer"""
-  def __init__(self, n_head:int, word_dim:int, vocab_size:int, n_block:int=1):
+  def __init__(self, src_vocab_size:int, src_max_seq_len:int, tgt_vocab_size:int, tgt_max_seq_len:int,
+               n_head:int, word_dim:int, n_block:int=1):
     """
     Args:
-        inputs_padding_idx：编码器输入词向量padding符的索引
-        outputs_padding_idx：解码器输入词向量padding符的索引
-        n_head: 多头注意力的头数量
-        word_dim: 词嵌入维度
-        vocab_size: 词表大小
-        n_block: 编码器/解码器个数
+      src_vocab_size: 源语言词表大小
+      src_max_seq_len：源语言序列最长长度
+      tgt_vocab_size：目标语言词表大小
+      tgt_max_seq_len：目标语言序列最长长度
+      n_head: 多头注意力的头数量
+      word_dim: 词嵌入维度
+      n_block: 编码器/解码器个数
     Returns:
-        预测概率 [batch_size, output_len, vocab_size]
+      预测概率 [batch_size, output_len, vocab_size]
     """
     super(Transformer, self).__init__()
-    self.input_pos_embedding = LearnedPositionalEmbeddingWithWordEmbedding(vocab_size, word_dim)
-    self.output_pos_embedding = LearnedPositionalEmbeddingWithWordEmbedding(vocab_size, word_dim)
+    self.input_pos_embedding = LearnedPositionalEmbeddingWithWordEmbedding(src_vocab_size, word_dim, src_max_seq_len)
+    self.output_pos_embedding = LearnedPositionalEmbeddingWithWordEmbedding(tgt_vocab_size, word_dim, tgt_max_seq_len)
     self.encoders = torch.nn.ModuleList([TransformerEncoder(n_head=n_head, word_dim=word_dim) for _ in range(n_block)])
     self.decoders = torch.nn.ModuleList([TransformerDecoder(n_head=n_head, word_dim=word_dim) for _ in range(n_block)])
-    self.linear = torch.nn.Linear(word_dim, vocab_size)
+    self.linear = torch.nn.Linear(word_dim, tgt_vocab_size)
 
   def __generate_causal_mask(self, seq_len:int) -> torch.Tensor:
     """
@@ -37,7 +39,7 @@ class Transformer(torch.nn.Module):
       [1, 1, 1, 1],  # 第4个词可以看到全部（如果未填充）
     ]
     """
-    causal_mask = torch.triu(torch.ones(seq_len, seq_len), diagonal=1).bool()
+    causal_mask = ~torch.triu(torch.ones(seq_len, seq_len), diagonal=1).bool()
     return causal_mask
 
   def __generate_padding_mask(self, input_ids) -> torch.Tensor:

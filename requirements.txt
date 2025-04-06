@@ -1,0 +1,6 @@
+jieba==0.42.1
+kagglehub==0.3.11
+nltk==3.9.1
+numpy==2.2.4
+scikit_learn==1.6.1
+torch==2.3.0+cu121

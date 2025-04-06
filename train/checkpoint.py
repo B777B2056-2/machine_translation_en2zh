@@ -7,10 +7,11 @@ from typing import Optional, Dict, Any
 
 class CheckpointMetaInfo(object):
   """检查点元信息"""
-  def __init__(self,  epoch:int, model_state:Dict[str, Any],
+  def __init__(self, epoch:int, model_state:Dict[str, Any], scaler_state:Optional[Dict[str, Any]],
                optimizer_state: Dict[str, Any], hyperparameters:Dict[str, Any]):
     self.epoch = epoch
     self.model_state = model_state
+    self.scaler_state = scaler_state
     self.optimizer_state = optimizer_state
     self.hyperparameters = hyperparameters
 
@@ -20,6 +21,7 @@ class CheckpointMetaInfo(object):
     return cls(
       epoch=state_dict['epoch'],
       model_state=state_dict['model_state'],
+      scaler_state=state_dict['scaler_state'],
       optimizer_state=state_dict['optimizer_state'],
       hyperparameters=state_dict['hyperparameters'],
     )
@@ -64,7 +66,7 @@ class CheckpointManager(object):
     if not checkpoints or len(checkpoints) == 0:
       return None
     # 按文件名中的epoch排序
-    checkpoints.sort(key=lambda x: x.split("_")[-1].split(".")[0], reverse=True)
+    checkpoints.sort(key=lambda x: x.replace("epoch_", "").replace("_checkpoint.pt", ""), reverse=True)
     latest_path = os.path.join(dir_path, checkpoints[0])
     loaded = torch.load(latest_path, map_location=device)
     if loaded.get('checkpoint_type') != 'meta_info':

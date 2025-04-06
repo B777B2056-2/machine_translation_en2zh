@@ -1,9 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: UTF-8 -*-
-
-
 import torch
-import torch.nn.functional as F
 
 
 class ScaleDotProductAttention(torch.nn.Module):
@@ -36,12 +33,23 @@ class MultiHeadAttention(torch.nn.Module):
     super(MultiHeadAttention, self).__init__()
     self.n_head = n_head
     self.d_out = d_out
-    assert d_in % n_head == 0
+    assert d_in % n_head == 0, "d_in必须可被n_head整除"
     self.attention = ScaleDotProductAttention()
     self.Wq = torch.nn.Linear(d_in, d_out, bias=False)  # [d_in, d_out]
     self.Wk = torch.nn.Linear(d_in, d_out, bias=False)  # [d_in, d_out]
     self.Wv = torch.nn.Linear(d_in, d_out, bias=False)  # [d_in, d_out]
     self.Wo = torch.nn.Linear(d_out, d_out, bias=False)  # [d_out, d_out]
+    # 参数初始化
+    self._init_weights()
+
+  def _init_weights(self):
+    """使用Xavier初始化参数"""
+    # 初始化Q/K/V投影矩阵
+    torch.nn.init.xavier_normal_(self.Wq.weight)
+    torch.nn.init.xavier_normal_(self.Wk.weight)
+    torch.nn.init.xavier_normal_(self.Wv.weight)
+    # 初始化输出投影矩阵
+    torch.nn.init.xavier_normal_(self.Wo.weight)
 
   def __split_heads(self, x: torch.Tensor):
     """将张量拆分为多头"""
