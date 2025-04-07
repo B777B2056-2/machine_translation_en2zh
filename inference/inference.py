@@ -62,7 +62,7 @@ class Inference:
       decoder_input = self.__build_decoder_inputs(decoder_outputs).to(self.device) # 解码器输入
       # 前向传播
       with torch.no_grad():
-        probs = self.net(encoder_input, decoder_input).cpu()
+        probs = self.net(encoder_input, decoder_input, use_cache=True).cpu()
       # 预测下一个词（取概率最大的词索引）
       next_token = probs[:, -1, :].argmax(dim=-1).item()
       if next_token == self.zh_tokenizer.end_flag_id():  # 终止条件：生成出终止符索引

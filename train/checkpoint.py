@@ -71,6 +71,6 @@ class CheckpointManager(object):
   def load_from_specified_path(file_path:str, device:str) -> Optional[CheckpointMetaInfo]:
     """从指定路径加载checkpoint"""
     loaded = torch.load(file_path, map_location=device)
-    if loaded.get('checkpoint_type') != 'meta_info':
+    if loaded.get_latest('checkpoint_type') != 'meta_info':
       raise ValueError("Invalid checkpoint format")
     return CheckpointMetaInfo.from_dict(loaded['data'])

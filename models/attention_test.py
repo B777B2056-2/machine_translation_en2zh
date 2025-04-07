@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+# -*- coding: UTF-8 -*-
 import unittest
 import torch
 from models.attention import ScaleDotProductAttention
@@ -34,7 +36,6 @@ class TestScaleDotProductAttention(unittest.TestCase):
     # 自定义实现
     custom_attn = ScaleDotProductAttention()
     custom_output = custom_attn(q, k, v, mask)
-    print((mask == 0))
     # 官方实现（带数值稳定性检查）
     with torch.no_grad():
       official_output = torch.nn.functional.scaled_dot_product_attention(
