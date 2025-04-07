@@ -27,7 +27,7 @@ class TransformerDecoder(torch.nn.Module):
     # 1. 多头注意力（掩码）
     masked_multi_head_attn_output = self.masked_multi_head_attn(Q=pos, K=pos, V=pos, mask=mask) # [batch_size, T, word_dim]
     # 2. Add & Norm
-    masked_multi_head_attn_output = self.multi_head_attn_layer_norm(pos + masked_multi_head_attn_output) # [batch_size, T, word_dim]
+    masked_multi_head_attn_output = self.masked_multi_head_attn_layer_norm(pos + masked_multi_head_attn_output) # [batch_size, T, word_dim]
     # 3. 多头注意力
     # 注意此处Q为解码器注意力分数，K与V均为编码器输出
     # 目的：在Decoder的时候，每一位单词都可以利用到Encoder所有单词的信息
