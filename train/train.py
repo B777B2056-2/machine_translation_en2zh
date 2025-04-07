@@ -114,13 +114,9 @@ class Trainer(object):
       model.load_state_dict(model_state)
     return model.to(self.device)
 
-  def __need_save_checkpoint(self) -> bool:
-    """检查用户是否需要保存ckpt"""
-    return self.ckpt.save_interval > 0
-
   def __save_checkpoint(self, epoch:int):
     """到达指定间隔，保存checkpoint"""
-    if not self.__need_save_checkpoint() or ((epoch + 1) % self.ckpt.save_interval != 0):
+    if self.ckpt.save_interval == 0 or ((epoch + 1) % self.ckpt.save_interval != 0):
       return
     self.ckpt.save(
       CheckpointMetaInfo(
@@ -131,6 +127,7 @@ class Trainer(object):
         hyperparameters=self.hyper_param,
       )
     )
+    self.ckpt.clean_history_checkpoints()
     print(f"save checkpoint for epoch {epoch}")
 
   def __resume_from_latest_checkpoint(self) -> int:

@@ -34,6 +34,8 @@ class CheckpointManager(object):
     self.save_interval = save_interval
     if not os.path.exists(self.storage_path):
       os.makedirs(storage_path, exist_ok=True)
+    else:
+      self.clean_history_checkpoints()
 
   def save(self, meta_info: CheckpointMetaInfo) -> str:
     """保存检查点"""
@@ -49,26 +51,26 @@ class CheckpointManager(object):
 
   def get_latest_ckpt(self, device:str) -> Optional[CheckpointMetaInfo]:
     """获取最新检查点"""
-    return CheckpointManager.get_latest_ckpt_in_specified_path(self.storage_path, device)
+    checkpoints = [f for f in os.listdir(self.storage_path) if "checkpoint" in f and f.endswith(".pt")]
+    if not checkpoints or len(checkpoints) == 0:
+      return None
+    latest_path = os.path.join(self.storage_path, checkpoints[0])
+    return CheckpointManager.load_from_specified_path(latest_path, device=device)
+
+  def clean_history_checkpoints(self) -> None:
+    """清理除最新checkpoint之外的所有checkpoint，节省磁盘空间"""
+    checkpoints = [f for f in os.listdir(self.storage_path) if "checkpoint" in f and f.endswith(".pt")]
+    if not checkpoints or len(checkpoints) < 2:
+      return None
+    checkpoints.sort(key=lambda x: int(x.replace("epoch_", "").replace("_checkpoint.pt", "")), reverse=True)
+    old_checkpoints = checkpoints[1:]
+    for old_checkpoint in old_checkpoints:
+      os.remove(os.path.join(self.storage_path, old_checkpoint))
 
   @staticmethod
   def load_from_specified_path(file_path:str, device:str) -> Optional[CheckpointMetaInfo]:
     """从指定路径加载checkpoint"""
     loaded = torch.load(file_path, map_location=device)
-    if loaded.get('checkpoint_type') != 'meta_info':
-      raise ValueError("Invalid checkpoint format")
-    return CheckpointMetaInfo.from_dict(loaded['data'])
-
-  @staticmethod
-  def get_latest_ckpt_in_specified_path(dir_path:str, device:str) -> Optional[CheckpointMetaInfo]:
-    """获取指定路径下最新检查点"""
-    checkpoints = [f for f in os.listdir(dir_path) if "checkpoint" in f and f.endswith(".pt")]
-    if not checkpoints or len(checkpoints) == 0:
-      return None
-    # 按文件名中的epoch排序
-    checkpoints.sort(key=lambda x: x.replace("epoch_", "").replace("_checkpoint.pt", ""), reverse=True)
-    latest_path = os.path.join(dir_path, checkpoints[0])
-    loaded = torch.load(latest_path, map_location=device)
     if loaded.get('checkpoint_type') != 'meta_info':
       raise ValueError("Invalid checkpoint format")
     return CheckpointMetaInfo.from_dict(loaded['data'])
