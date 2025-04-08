@@ -8,11 +8,12 @@ from typing import Optional, Dict, Any
 class CheckpointMetaInfo(object):
   """检查点元信息"""
   def __init__(self, epoch:int, model_state:Dict[str, Any], scaler_state:Optional[Dict[str, Any]],
-               optimizer_state: Dict[str, Any], hyperparameters:Dict[str, Any]):
+               optimizer_state: Dict[str, Any], criterion_state:Dict[str, Any], hyperparameters:Dict[str, Any]):
     self.epoch = epoch
     self.model_state = model_state
     self.scaler_state = scaler_state
     self.optimizer_state = optimizer_state
+    self.criterion_state = criterion_state
     self.hyperparameters = hyperparameters
 
   @classmethod
@@ -22,6 +23,7 @@ class CheckpointMetaInfo(object):
       epoch=state_dict['epoch'],
       model_state=state_dict['model_state'],
       scaler_state=state_dict['scaler_state'],
+      criterion_state=state_dict['criterion_state'],
       optimizer_state=state_dict['optimizer_state'],
       hyperparameters=state_dict['hyperparameters'],
     )

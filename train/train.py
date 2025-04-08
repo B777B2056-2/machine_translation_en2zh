@@ -95,6 +95,7 @@ class Trainer(object):
         model_state=self.net.state_dict(),
         scaler_state=self.precision_strategy.scaler.state_dict(),
         optimizer_state=self.optimizer.state_dict(),
+        criterion_state=self.criterion.state_dict(),
         hyperparameters=self.hyper_param,
       )
     )
@@ -115,6 +116,7 @@ class Trainer(object):
     if isinstance(self.precision_strategy, BF16PrecisionStrategy):
       self.precision_strategy.load_scaler_state(scaler_state=checkpoint.scaler_state)
     self.optimizer.load_state_dict(checkpoint.optimizer_state)
+    self.criterion.load_state_dict(checkpoint.criterion_state)
 
     # 返回最后训练位置
     last_epoch = checkpoint.epoch
