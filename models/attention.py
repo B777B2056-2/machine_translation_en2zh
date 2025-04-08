@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: UTF-8 -*-
+from typing import Tuple, Optional
+
 import torch
 
 
@@ -62,21 +64,33 @@ class MultiHeadAttention(torch.nn.Module):
     expanded_mask = mask.unsqueeze(1)  # [batch, n_head, T, T]
     return expanded_mask
 
-  def forward(self, Q:torch.Tensor, K:torch.Tensor, V:torch.Tensor, mask=None):
+  def forward(self, Q:torch.Tensor, K:torch.Tensor, V:torch.Tensor, mask=None, past_key_value=None) -> Tuple[
+    torch.Tensor, Optional[Tuple[torch.Tensor, torch.Tensor]]]:
     """多头注意力机制前向传播"""
     # 1. 输入的Q、K、V矩阵与Wq、Wk、Wv相乘，Q、K、V拆分为多头
     Q = self.__split_heads(self.Wq(Q))  # [batch_size, n_head, T, d_out/n_head]
     K = self.__split_heads(self.Wk(K))  # [batch_size, n_head, T, d_out/n_head]
     V = self.__split_heads(self.Wv(V))  # [batch_size, n_head, T, d_out/n_head]
-    # 2. 计算注意力
+    # 2. 使用kv cache（仅推理时）
+    if past_key_value is not None:
+      # 获取上次的kv
+      past_k = past_key_value[0]
+      past_v = past_key_value[1]
+      # 拼接起来
+      past_seq_len = past_k.shape[-2]
+      K[:, :, :past_seq_len, :] = past_k
+      V[:, :, :past_seq_len, :] = past_v
+    current_key_value = (K, V)
+    # 2. 掩码
     multi_head_mask = None
     if mask is not None:
       multi_head_mask = self.__expand_mask(mask)
+    # 3. 计算注意力
     Z = self.attention(Q=Q, K=K, V=V, mask=multi_head_mask)  # [batch_size, n_head, T, d_out/n_head]
-    # 3. 拼接所有头的注意力得分（按d_out/n_head维度拼接）
+    # 4. 拼接所有头的注意力得分（按d_out/n_head维度拼接）
     batch_size, _, T, _ = Z.shape
     Z = Z.transpose(1, 2).contiguous().view(batch_size, T, -1)  # [batch_size, T, d_out]
-    # 4. 线性投影
+    # 5. 线性投影
     output = self.Wo(Z) # [batch_size, T, d_out]
-    return output
+    return output, current_key_value
 

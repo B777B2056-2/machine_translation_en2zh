@@ -55,11 +55,12 @@ class Transformer(torch.nn.Module):
     combined_mask = causal_mask.to(padding_mask.device) & padding_mask
     return combined_mask
 
-  def forward(self, input_embeddings:torch.Tensor, output_embeddings:torch.Tensor) -> torch.Tensor:
+  def forward(self, input_embeddings:torch.Tensor, output_embeddings:torch.Tensor, use_cache:bool=False) -> torch.Tensor:
     """
     Args:
         input_embeddings: 编码器输入 [batch_size, input_len]
         output_embeddings: 解码器输入 [batch_size, output_len]
+        use_cache: 是否使用kv cache
     Returns:
         预测概率 [batch_size, output_len, vocab_size]
     """
@@ -81,7 +82,7 @@ class Transformer(torch.nn.Module):
       # 编码
       encoder_outputs = encoder(encoder_input)
       # 解码
-      decoder_outputs = decoder(decoder_input, encoder_outputs, mask=mask)
+      decoder_outputs = decoder(decoder_input, encoder_outputs, mask=mask, use_cache=use_cache)
       # 重置编码器/解码器输入
       encoder_input = encoder_outputs
       decoder_input = decoder_outputs

@@ -118,7 +118,7 @@ class Tokenizer(ABC):
     # token编码：转成input ids向量
     self.__tokenized_sentences = self.__word_to_idx(corpus)
 
-  def tokenize(self, prompts=None) -> List[List[int]]:
+  def tokenize(self, prompts) -> List[List[int]]:
     # 已有词表，分词后直接查表，并添加起始、结束符索引位置
     corpus, _ = self.__tokenized(lines=prompts)  # 分词
     vector = []

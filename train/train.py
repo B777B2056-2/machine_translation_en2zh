@@ -155,29 +155,37 @@ class Trainer(object):
     total_token_acc = 0.0
     total_seq_acc = 0.0
 
-    for batch_idx, (encoder_inputs, decoder_inputs, decoder_outputs) in enumerate(data_loader):
-      encoder_inputs, decoder_inputs, decoder_outputs = encoder_inputs.to(self.device), decoder_inputs.to(
-        self.device), decoder_outputs.to(self.device)
+    with torch.profiler.profile(
+        schedule=torch.profiler.schedule(wait=1, warmup=1, active=3, repeat=1),
+        on_trace_ready=torch.profiler.tensorboard_trace_handler('./log/transformer'),
+        record_shapes=True,
+        profile_memory=True,
+        with_stack=True
+    ) as prof:
+      for batch_idx, (encoder_inputs, decoder_inputs, decoder_outputs) in enumerate(data_loader):
+        prof.step()
+        encoder_inputs, decoder_inputs, decoder_outputs = encoder_inputs.to(self.device), decoder_inputs.to(
+          self.device), decoder_outputs.to(self.device)
 
-      if is_training:
-        # 反向传播和优化（仅在训练模式）
-        probs, loss_value = self.precision_strategy.do_train_one_batch(encoder_inputs=encoder_inputs,
-                                                                       decoder_inputs=decoder_inputs,
-                                                                       decoder_outputs=decoder_outputs)
-      else:
-        # 禁用梯度计算（仅在验证模式）
-        with torch.no_grad():
-          probs = self.net(encoder_inputs, decoder_inputs)
-          loss_value = self.criterion(
-            probs.contiguous().view(-1, self.hyper_param["tgt_vocab_size"]),
-            decoder_outputs.contiguous().view(-1)
-          ).item()
+        if is_training:
+          # 反向传播和优化（仅在训练模式）
+          probs, loss_value = self.precision_strategy.do_train_one_batch(encoder_inputs=encoder_inputs,
+                                                                         decoder_inputs=decoder_inputs,
+                                                                         decoder_outputs=decoder_outputs)
+        else:
+          # 禁用梯度计算（仅在验证模式）
+          with torch.no_grad():
+            probs = self.net(encoder_inputs, decoder_inputs)
+            loss_value = self.criterion(
+              probs.contiguous().view(-1, self.hyper_param["tgt_vocab_size"]),
+              decoder_outputs.contiguous().view(-1)
+            ).item()
 
-      # 计算指标
-      token_acc, seq_acc = calculate_model_metrics(probs, decoder_outputs)
-      total_loss += loss_value
-      total_token_acc += token_acc
-      total_seq_acc += seq_acc
+        # 计算指标
+        token_acc, seq_acc = calculate_model_metrics(probs, decoder_outputs)
+        total_loss += loss_value
+        total_token_acc += token_acc
+        total_seq_acc += seq_acc
 
     # 计算平均指标
     n_batches = len(data_loader)
@@ -196,6 +204,7 @@ class Trainer(object):
     self.net.train()
     epoch_start = self.__resume_from_latest_checkpoint()
     print(f"Starting Training From Epoch {epoch_start}")
+
     for epoch in range(epoch_start, n_epoch):
       train_loss, train_token_acc, train_seq_acc = self._run_epoch(self.train_loader, is_training=True) # 训练
       val_loss, val_token_acc, val_seq_acc = self._run_epoch(self.val_loader, is_training=False)        # 验证
