@@ -21,7 +21,7 @@ class TransformerEncoder(torch.nn.Module):
   def forward(self, pos:torch.Tensor) -> torch.Tensor:
     # 设pos：[batch_size, T, word_dim]
     # 1. 多头注意力
-    multi_head_attn_output = self.multi_head_attn(Q=pos, K=pos, V=pos) # [batch_size, T, word_dim]
+    multi_head_attn_output, _ = self.multi_head_attn(Q=pos, K=pos, V=pos) # [batch_size, T, word_dim]
     # 2. Add & Norm
     multi_head_attn_output = self.multi_head_attn_layer_norm(pos + multi_head_attn_output) # [batch_size, T, word_dim]
     # 3. 前馈神经网络
