@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: UTF-8 -*-
+import sys
+sys.path.append(".")
 import torch
 from data.data import EnglishTokenizer, ChineseTokenizer
 from data.tokenizer import Tokenizer, TokenizerMode
@@ -79,6 +81,8 @@ class Inference:
       if next_token == self.zh_tokenizer.end_flag_id():  # 终止条件：生成出终止符索引
         break
       decoder_outputs.append(next_token)
+    # 一轮对话后，重置kv cache
+    self.net.reset_cache()
     # 将词索引转换为文本
     words = self.zh_tokenizer.detokenize(tokens=decoder_outputs)
     if Tokenizer.SENTENCE_START_PLACEHOLDER in words:

@@ -92,3 +92,7 @@ class Transformer(torch.nn.Module):
     # outputs = F.softmax(outputs,dim=-1) # 交叉熵损失函数包含了softmax
     return outputs
 
+  def reset_cache(self) -> None:
+    """重置kv cache"""
+    for decoder in self.decoders:
+      decoder.reset_cache()

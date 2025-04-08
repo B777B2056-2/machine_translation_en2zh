@@ -17,6 +17,9 @@ class KVCacheManager(object):
   def get_latest(self) -> Tuple[torch.Tensor, torch.Tensor]:
     return self.cache
 
+  def clear(self) -> None:
+    self.cache = None
+
 
 class TransformerDecoder(torch.nn.Module):
   """Transformer解码器"""
@@ -62,3 +65,5 @@ class TransformerDecoder(torch.nn.Module):
     output = self.ffn_layer_norm(multi_head_attn_output+ffn_output)  # [batch_size, T, word_dim]
     return output
 
+  def reset_cache(self):
+    self.attn_kv_cache.clear()

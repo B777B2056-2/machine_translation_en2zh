@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: UTF-8 -*-
+import sys
+sys.path.append(".")
 from data.tokenizer import Tokenizer
 from models.transformer import Transformer
 from data.data import DataLoaderBuilder
@@ -15,37 +17,6 @@ def setup_train_seed(seed):
   np.random.seed(seed)
   random.seed(seed)
   torch.backends.cudnn.deterministic = True
-
-
-def calculate_model_metrics(probs: torch.Tensor, targets: torch.Tensor,
-                            pad_token_id: int = 0) -> Tuple[float, float]:
-  """
-  计算模型输出的指标（词级准确率、句级准确率）
-
-  Args:
-      probs: 模型输出的概率分布 [batch, seq_len, vocab_size]
-      targets: 目标token IDs [batch, seq_len]
-      pad_token_id: 用于计算mask的padding token ID
-
-  Returns:
-      token_acc: 词级准确率（忽略padding）
-      seq_acc: 句级准确率
-  """
-  # 获取预测的token (argmax)
-  pred_tokens = probs.argmax(dim=-1)  # [batch, seq_len]
-
-  # Token-level Accuracy（忽略padding）
-  mask = (targets != pad_token_id)
-  token_correct = ((pred_tokens == targets) & mask).sum().item()
-  token_total = mask.sum().item()
-  token_acc = token_correct / token_total if token_total > 0 else 0.0
-
-  # Sequence-level Accuracy（整个句子完全正确）
-  seq_correct = (pred_tokens == targets).all(dim=-1).sum().item()
-  seq_total = targets.size(0)
-  seq_acc = seq_correct / seq_total if seq_total > 0 else 0.0
-
-  return token_acc, seq_acc
 
 
 class Trainer(object):
@@ -149,51 +120,34 @@ class Trainer(object):
     last_epoch = checkpoint.epoch
     return last_epoch + 1  # 从下一个epoch开始
 
-  def _run_epoch(self, data_loader, is_training: bool) -> Tuple[float, float, float]:
+  def _run_epoch(self, data_loader, is_training: bool) -> float:
     """统一训练/验证循环"""
     total_loss = 0.0
-    total_token_acc = 0.0
-    total_seq_acc = 0.0
 
-    with torch.profiler.profile(
-        schedule=torch.profiler.schedule(wait=1, warmup=1, active=3, repeat=1),
-        on_trace_ready=torch.profiler.tensorboard_trace_handler('./log/transformer'),
-        record_shapes=True,
-        profile_memory=True,
-        with_stack=True
-    ) as prof:
-      for batch_idx, (encoder_inputs, decoder_inputs, decoder_outputs) in enumerate(data_loader):
-        prof.step()
-        encoder_inputs, decoder_inputs, decoder_outputs = encoder_inputs.to(self.device), decoder_inputs.to(
-          self.device), decoder_outputs.to(self.device)
+    for batch_idx, (encoder_inputs, decoder_inputs, decoder_outputs) in enumerate(data_loader):
+      encoder_inputs, decoder_inputs, decoder_outputs = encoder_inputs.to(self.device), decoder_inputs.to(
+        self.device), decoder_outputs.to(self.device)
 
-        if is_training:
-          # 反向传播和优化（仅在训练模式）
-          probs, loss_value = self.precision_strategy.do_train_one_batch(encoder_inputs=encoder_inputs,
-                                                                         decoder_inputs=decoder_inputs,
-                                                                         decoder_outputs=decoder_outputs)
-        else:
-          # 禁用梯度计算（仅在验证模式）
-          with torch.no_grad():
-            probs = self.net(encoder_inputs, decoder_inputs)
-            loss_value = self.criterion(
-              probs.contiguous().view(-1, self.hyper_param["tgt_vocab_size"]),
-              decoder_outputs.contiguous().view(-1)
-            ).item()
+      if is_training:
+        # 反向传播和优化（仅在训练模式）
+        probs, loss_value = self.precision_strategy.do_train_one_batch(encoder_inputs=encoder_inputs,
+                                                                       decoder_inputs=decoder_inputs,
+                                                                       decoder_outputs=decoder_outputs)
+      else:
+        # 禁用梯度计算（仅在验证模式）
+        with torch.no_grad():
+          probs = self.net(encoder_inputs, decoder_inputs)
+          loss_value = self.criterion(
+            probs.contiguous().view(-1, self.hyper_param["tgt_vocab_size"]),
+            decoder_outputs.contiguous().view(-1)
+          ).item()
 
-        # 计算指标
-        token_acc, seq_acc = calculate_model_metrics(probs, decoder_outputs)
-        total_loss += loss_value
-        total_token_acc += token_acc
-        total_seq_acc += seq_acc
+      # 计算指标
+      total_loss += loss_value
 
     # 计算平均指标
     n_batches = len(data_loader)
-    return (
-      total_loss / n_batches,
-      total_token_acc / n_batches,
-      total_seq_acc / n_batches
-    )
+    return total_loss / n_batches
 
   def __call__(self, n_epoch:int) -> None:
     """
@@ -206,11 +160,9 @@ class Trainer(object):
     print(f"Starting Training From Epoch {epoch_start}")
 
     for epoch in range(epoch_start, n_epoch):
-      train_loss, train_token_acc, train_seq_acc = self._run_epoch(self.train_loader, is_training=True) # 训练
-      val_loss, val_token_acc, val_seq_acc = self._run_epoch(self.val_loader, is_training=False)        # 验证
-      print(f"Epoch {epoch} | \
-            Train Loss: {train_loss:.4f} | Token Acc: {train_token_acc:.4f} | Seq Acc: {train_seq_acc:.4f} | \
-            Val Loss: {val_loss:.4f} | Token Acc: {val_token_acc:.4f} | Seq Acc: {val_seq_acc:.4f}")
+      train_loss = self._run_epoch(self.train_loader, is_training=True) # 训练
+      val_loss = self._run_epoch(self.val_loader, is_training=False)        # 验证
+      print(f"Epoch {epoch} | Train Loss: {train_loss:.4f} | Val Loss: {val_loss:.4f}")
       # 到达指定间隔，保存checkpoint
       self.__save_checkpoint(epoch=epoch)
 
