@@ -7,6 +7,16 @@ from models.transformer import Transformer
 from train.checkpoint import CheckpointManager
 
 
+def setup_train_seed(seed):
+  """设置随机种子"""
+  import random, numpy as np
+  torch.manual_seed(seed)
+  torch.cuda.manual_seed_all(seed)
+  np.random.seed(seed)
+  random.seed(seed)
+  torch.backends.cudnn.deterministic = True
+
+
 class Inference:
   """Transformer推理器"""
   def __init__(self, model_path:str, en_tokenizer_path:str, zh_tokenizer_path:str, max_seq_len:int=50):
@@ -21,6 +31,7 @@ class Inference:
     """载入模型"""
     checkpoint = CheckpointManager.load_from_specified_path(model_path, device=self.device)
     hyper_param = checkpoint.hyperparameters
+    setup_train_seed(hyper_param["seed"])
     self.net = Transformer(
       src_vocab_size=hyper_param["src_vocab_size"],
       src_max_seq_len=hyper_param["src_max_seq_len"],

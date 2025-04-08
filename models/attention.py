@@ -77,8 +77,9 @@ class MultiHeadAttention(torch.nn.Module):
       past_k = past_key_value[0]
       past_v = past_key_value[1]
       # 拼接起来
-      K = torch.cat([past_k, K], dim=-2)
-      V = torch.cat([past_v, V], dim=-2)
+      past_seq_len = past_k.shape[-2]
+      K[:, :, :past_seq_len, :] = past_k
+      V[:, :, :past_seq_len, :] = past_v
     current_key_value = (K, V)
     # 2. 掩码
     multi_head_mask = None
