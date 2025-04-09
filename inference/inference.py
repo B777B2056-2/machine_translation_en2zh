@@ -82,7 +82,10 @@ class Inference:
         break
       decoder_outputs.append(next_token)
     # 一轮对话后，重置kv cache
-    self.net.reset_cache()
+    if isinstance(self.net, torch.nn.DataParallel):
+      self.net.module.reset_cache()
+    else:
+      self.net.reset_cache()
     # 将词索引转换为文本
     words = self.zh_tokenizer.detokenize(tokens=decoder_outputs)
     if Tokenizer.SENTENCE_START_PLACEHOLDER in words:

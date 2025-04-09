@@ -60,7 +60,7 @@ class Trainer(object):
     # 网络初始化
     self.net = self.__create_model(hyper_param=self.hyper_param)
     self.criterion = torch.nn.CrossEntropyLoss(ignore_index=Tokenizer.WORD_PADDING_IDX)
-    self.optimizer = torch.optim.SGD(self.net.parameters(), lr=lr)
+    self.optimizer = torch.optim.AdamW(self.net.parameters(), lr=lr)
     self.precision_strategy = precision_strategy_factory(precision=torch.float32 if precision == "fp32" else torch.bfloat16,
                                                          net=self.net,
                                                          criterion=self.criterion,
